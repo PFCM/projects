@@ -48,7 +48,7 @@ var taskStatusFromString = func() map[string]TaskStatus {
 }()
 
 func (t TaskStatus) String() string {
-	if t < 0 || int(t) >= len(taskStatusToString) {
+	if int(t) >= len(taskStatusToString) {
 		return "INVALID"
 	}
 	return taskStatusToString[t]

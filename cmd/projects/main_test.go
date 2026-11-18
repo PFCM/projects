@@ -4,16 +4,24 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/fatih/color"
 )
 
 func TestWriteTasksFrom(t *testing.T) {
+	color.NoColor = true
+	local := time.Local
+	time.Local = time.UTC
+	t.Cleanup(func() { time.Local = local })
+
 	tasks := map[string]Task{
-		"T1": {ID: "T1", Title: "one"},
-		"T2": {ID: "T2", Title: "two"},
-		"T3": {ID: "T3", Title: "three"},
-		"T4": {ID: "T4", Title: "four"},
-		"T5": {ID: "T5", Title: "five"},
-		"T6": {ID: "T6", Title: "six"},
+		"T1": {ID: "T1", Title: "one", Status: TaskStatusDone},
+		"T2": {ID: "T2", Title: "two", Status: TaskStatusInProgress, Claim: Claim{By: "paul", At: time.Date(2026, 11, 11, 10, 2, 0, 0, time.UTC)}},
+		"T3": {ID: "T3", Title: "three", Status: TaskStatusInReview},
+		"T4": {ID: "T4", Title: "four", Status: TaskStatusTODO},
+		"T5": {ID: "T5", Title: "five", Status: TaskStatusTODO},
+		"T6": {ID: "T6", Title: "six", Status: TaskStatusTODO},
 	}
 	for _, c := range []struct {
 		name   string
@@ -21,53 +29,53 @@ func TestWriteTasksFrom(t *testing.T) {
 		want   string
 	}{{
 		name: "single",
-		want: `T1: one
+		want: `T1: one - done
 `,
 	}, {
 		name:   "chain",
 		blocks: map[string][]string{"T1": {"T2"}, "T2": {"T3"}},
 		want: `
-T1: one
-└── T2: two
-    └── T3: three
+T1: one - done
+└── T2: two [paul 2026-11-11 10:02]
+    └── T3: three - in-review
 `,
 	}, {
 		name:   "fan-out",
 		blocks: map[string][]string{"T1": {"T3", "T2"}},
 		want: `
-T1: one
-├── T2: two
-└── T3: three
+T1: one - done
+├── T2: two [paul 2026-11-11 10:02]
+└── T3: three - in-review
 `,
 	}, {
 		name:   "continuation",
 		blocks: map[string][]string{"T1": {"T2", "T3"}, "T2": {"T4"}},
 		want: `
-T1: one
-├── T2: two
+T1: one - done
+├── T2: two [paul 2026-11-11 10:02]
 │   └── T4: four
-└── T3: three
+└── T3: three - in-review
 `,
 	}, {
 		name:   "shared",
 		blocks: map[string][]string{"T1": {"T2", "T3"}, "T2": {"T4"}, "T3": {"T4"}},
 		want: `
-T1: one
-├── T2: two
+T1: one - done
+├── T2: two [paul 2026-11-11 10:02]
 │   └── T4: four
-└── T3: three
+└── T3: three - in-review
     └── T4
 `,
 	}, {
 		name:   "nested-continuation",
 		blocks: map[string][]string{"T1": {"T2", "T3"}, "T2": {"T4", "T5"}, "T4": {"T6"}},
 		want: `
-T1: one
-├── T2: two
+T1: one - done
+├── T2: two [paul 2026-11-11 10:02]
 │   ├── T4: four
 │   │   └── T6: six
 │   └── T5: five
-└── T3: three
+└── T3: three - in-review
 `,
 	}} {
 		t.Run(c.name, func(t *testing.T) {

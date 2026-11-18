@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/fatih/color"
 )
 
 var (
@@ -66,6 +68,39 @@ func overview(dir string) error {
 }
 
 func writeTasksFrom(w io.Writer, root string, tasks map[string]Task, blocks map[string][]string) {
+	blocked := func(t Task) bool {
+		if t.Status != TaskStatusTODO {
+			return false
+		}
+		for _, pid := range t.BlockedBy {
+			if tasks[pid].Status != TaskStatusDone {
+				return true
+			}
+		}
+		return false
+	}
+
+	printTaskID := func(t Task) {
+		var c *color.Color
+		switch t.Status {
+		case TaskStatusDone:
+			c = color.New(color.FgGreen, color.Bold)
+		case TaskStatusInProgress:
+			c = color.New(color.FgBlue, color.Bold)
+		case TaskStatusInReview:
+			c = color.New(color.FgCyan, color.Bold)
+		case TaskStatusTODO:
+			if blocked(t) {
+				c = color.New(color.FgRed, color.Bold)
+			} else {
+				c = color.New(color.FgYellow, color.Bold)
+			}
+		default:
+			c = color.New()
+		}
+		c.Fprint(w, t.ID)
+	}
+
 	type frame struct {
 		id     string
 		line   string
@@ -80,11 +115,21 @@ func writeTasksFrom(w io.Writer, root string, tasks map[string]Task, blocks map[
 		todo = todo[:len(todo)-1]
 		fmt.Fprint(w, cur.line)
 		if seen[cur.id] {
-			fmt.Fprintln(w, cur.id)
+			printTaskID(tasks[cur.id])
+			fmt.Fprintln(w)
 			continue
 		}
 		seen[cur.id] = true
-		fmt.Fprintf(w, "%s: %s\n", cur.id, tasks[cur.id].Title)
+		t := tasks[cur.id]
+		status := " - " + t.Status.String()
+		if t.Status == TaskStatusTODO {
+			status = ""
+		}
+		if t.Claim != (Claim{}) {
+			status = fmt.Sprintf(" [%s %s]", t.Claim.By, t.Claim.At.Local().Format("2006-01-02 15:04"))
+		}
+		printTaskID(t)
+		fmt.Fprintf(w, ": %s%s\n", t.Title, status)
 		// Backwards, because they're pushed to a stack and popped in reverse.
 		children := blocks[cur.id]
 		slices.SortFunc(children, func(a, b string) int {
