@@ -36,6 +36,14 @@ func TestInitProject(t *testing.T) {
 	if !bytes.Equal(got, prdContents) {
 		t.Errorf("prd.md mismatch:\ngot: %q\nwant: %q", got, prdContents)
 	}
+
+	got, err = os.ReadFile(filepath.Join(dir, "design.md"))
+	if err != nil {
+		t.Fatalf("initProject: reading design.md: %v", err)
+	}
+	if !bytes.Equal(got, designContents) {
+		t.Errorf("design.md mismatch:\ngot: %q\nwant: %q", got, designContents)
+	}
 }
 
 func TestWriteTasksFrom(t *testing.T) {

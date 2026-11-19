@@ -50,6 +50,9 @@ func fatalf(msg string, args ...any) {
 //go:embed prd.md
 var prdContents []byte
 
+//go:embed design.md
+var designContents []byte
+
 func initProject(dir string) error {
 	if err := os.MkdirAll(filepath.Join(dir, "tasks"), 0755); err != nil {
 		return err
@@ -60,7 +63,7 @@ func initProject(dir string) error {
 	if err := maybeWrite(filepath.Join(dir, "prd.md"), prdContents); err != nil {
 		return err
 	}
-	return nil
+	return maybeWrite(filepath.Join(dir, "design.md"), designContents)
 }
 
 func maybeWrite(path string, contents []byte) error {
