@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -25,6 +26,10 @@ func main() {
 		fatalf("no command specified\n")
 	}
 	switch cmd := flag.Arg(0); cmd {
+	case "init":
+		if err := initProject(*dirFlag); err != nil {
+			fatalf("%v\n", err)
+		}
 	case "overview":
 		if err := overview(*dirFlag); err != nil {
 			fatalf("%v\n", err)
@@ -37,6 +42,16 @@ func main() {
 func fatalf(msg string, args ...any) {
 	fmt.Fprintf(os.Stderr, msg, args...)
 	os.Exit(1)
+}
+
+func initProject(dir string) error {
+	if err := os.MkdirAll(filepath.Join(dir, "tasks"), 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "reviews"), 0755); err != nil {
+		return err
+	}
+	return nil
 }
 
 func overview(dir string) error {
