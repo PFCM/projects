@@ -2,9 +2,12 @@
 package main
 
 import (
+	_ "embed"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -44,6 +47,9 @@ func fatalf(msg string, args ...any) {
 	os.Exit(1)
 }
 
+//go:embed prd.md
+var prdContents []byte
+
 func initProject(dir string) error {
 	if err := os.MkdirAll(filepath.Join(dir, "tasks"), 0755); err != nil {
 		return err
@@ -51,7 +57,21 @@ func initProject(dir string) error {
 	if err := os.MkdirAll(filepath.Join(dir, "reviews"), 0755); err != nil {
 		return err
 	}
+	if err := maybeWrite(filepath.Join(dir, "prd.md"), prdContents); err != nil {
+		return err
+	}
 	return nil
+}
+
+func maybeWrite(path string, contents []byte) error {
+	if _, err := os.Stat(path); !errors.Is(err, fs.ErrNotExist) {
+		if err == nil {
+			fmt.Fprintf(os.Stderr, "%s: already exists, skipping", path)
+			return nil
+		}
+		return err
+	}
+	return os.WriteFile(path, contents, 0755)
 }
 
 func overview(dir string) error {

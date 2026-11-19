@@ -1,13 +1,42 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/fatih/color"
 )
+
+func TestInitProject(t *testing.T) {
+	dir := t.TempDir()
+	if err := initProject(dir); err != nil {
+		t.Fatalf("initProject(%q): %v", dir, err)
+	}
+
+	for _, name := range []string{"tasks", "reviews"} {
+		info, err := os.Stat(filepath.Join(dir, name))
+		if err != nil {
+			t.Errorf("initProject: expect %s/ to exist: %v", name, err)
+			continue
+		}
+		if !info.IsDir() {
+			t.Errorf("initProject: expect directory at %s", name)
+		}
+	}
+
+	got, err := os.ReadFile(filepath.Join(dir, "prd.md"))
+	if err != nil {
+		t.Fatalf("initProject: reading prd.md: %v", err)
+	}
+	if !bytes.Equal(got, prdContents) {
+		t.Errorf("prd.md mismatch:\ngot: %q\nwant: %q", got, prdContents)
+	}
+}
 
 func TestWriteTasksFrom(t *testing.T) {
 	color.NoColor = true
